@@ -1,4 +1,5 @@
 import socket
+import struct
 import time
 from .GameControlData import GameControlData
 import threading
@@ -10,9 +11,21 @@ class GameController():
         self.__socket.bind(('', 3838))
         self.__socket.settimeout(0.5)
         
+        self.request_port = 3636
+        self.target_ip = "127.0.0.1"
         self.latest_message = None
         self.lock = threading.Lock()
         self.running = True
+        self.register_as_monitor()
+
+    def register_as_monitor(self):
+        """Sends the 5-byte 'RGTr' + \x00 packet to the controller."""
+        header = b'RGTr'
+        version = struct.pack('B', 0) # 1 byte unsigned char (0)
+        packet = header + version
+        
+        print(f"Sending monitor request to {self.target_ip}:{self.request_port}...")
+        self.__socket.sendto(packet, (self.target_ip, self.request_port))
 
     def listen_forever(self):
         self.__socket.setblocking(False)
@@ -22,7 +35,9 @@ class GameController():
             while True:
                 try:
                     data, address = self.__socket.recvfrom(8192)
-                    last_packet = data
+                    if data.startswith(b'RGTD'):
+                        last_packet = data
+                    
                 except BlockingIOError:
                     break
             
