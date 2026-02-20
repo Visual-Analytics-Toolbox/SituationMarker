@@ -3,7 +3,7 @@ This little tool can mark situations that are happening live in a RoboCup SPL ga
 The tool only works if a game controller is connected.
 
 ## Setup GameController
-Setup the game controller from ... TODO: insert link here
+Setup the game controller from https://github.com/RoboCup-SPL/GameController3/tree/master
 
 ## Configuration
 TODO: introduce single and double mode here

@@ -1,36 +1,41 @@
 import socket
-import logging
+import time
 from .GameControlData import GameControlData
-
+import threading
 
 class GameController():
-    """
-    The GameController class is used to receive the infos of a game.
-    If new data was received, it gets parsed and published on the blackboard.
-    """
-
     def __init__(self):
-        """
-        Constructor.
-        Init class variables and establish the udp socket connection to the GameController.
-        """
-        self.__source = None
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.__socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.__socket.bind(('', 3838))
-        self.__socket.settimeout(1)  # in sec
+        self.__socket.settimeout(0.5)
         
-        
-    def run(self):
-        try:
-            data, address = self.__socket.recvfrom(8192)
+        self.latest_message = None
+        self.lock = threading.Lock()
+        self.running = True
+
+    def listen_forever(self):
+        self.__socket.setblocking(False)
+        while self.running:
+            last_packet = None
+            # Drain everything currently in the OS buffer
+            while True:
+                try:
+                    data, address = self.__socket.recvfrom(8192)
+                    last_packet = data
+                except BlockingIOError:
+                    break
             
-            if len(data) > 0:
-                if self.__source is None or address[0] == self.__source:
-                    message = GameControlData(data)
-                    logging.info(message.secsRemaining)
-                    return message
-        except Exception as e:
-            logging.error(e)
-            return None
+            # parse and return the newest packet
+            if last_packet:
+                new_msg = GameControlData(last_packet)
+                with self.lock: # Protect the write
+                    self.latest_message = new_msg
+            
+            # Give the CPU a tiny break (e.g., 10ms)
+            time.sleep(0.01)
+
+    def get_latest(self):
+        """The button-press calls this to grab whatever is current."""
+        with self.lock:
+            return self.latest_message
