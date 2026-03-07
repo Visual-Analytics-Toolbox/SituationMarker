@@ -1,5 +1,5 @@
 
-from utils.GameController import GameController
+from utils.GameController import TrueGameData,RobotStatusListener,GameData
 from utils.logging import get_logger
 from vaapi.client import Vaapi
 import os
@@ -14,7 +14,9 @@ class SituationMarker():
         base_url=os.environ.get("VAT_API_URL"),
         api_key=os.environ.get("VAT_API_TOKEN"),
     )
-        self.controller = GameController()
+        self.game_data = GameData()
+        self.true_game_data = TrueGameData()
+        self.robot_status = RobotStatusListener()
         self.is_running = True
 
         print('press enter to mark a situation\n enter q to stop the programm')
@@ -28,11 +30,19 @@ class SituationMarker():
         finally:
             print("Exiting application.")
             # Optional: tell the controller thread to stop too
-            self.controller.running = False
+            self.game_data.running = False
+            self.true_game_data.running = False
+            self.robot_status.running = False
 
     def start_threads(self):
-        udp_thread = threading.Thread(target=self.controller.listen_forever, daemon=True)
-        udp_thread.start()
+        game_data_thread = threading.Thread(target=self.game_data.listen_forever, daemon=True)
+        game_data_thread.start()
+
+        true_game_data_thread = threading.Thread(target=self.true_game_data.listen_forever, daemon=True)
+        true_game_data_thread.start()
+
+        robot_status_thread = threading.Thread(target=self.robot_status.listen_forever, daemon=True)
+        robot_status_thread.start()
         
         key_thread = threading.Thread(target=self.key_listener, daemon=True)
         key_thread.start()
@@ -45,9 +55,15 @@ class SituationMarker():
                 break
             
             # Grab the freshest data available right now
-            msg = self.controller.get_latest()
-            if msg:
+            true_msg = self.true_game_data.get_latest()
+            if true_msg:
+                print(true_msg)
+            msg = self.game_data.get_latest()
+            if msg: 
                 print(msg)
+            robot_msg = self.robot_status.get_latest()
+            if robot_msg:
+                print(robot_msg)
             else:
                 print("No data received yet...")
                 

@@ -245,7 +245,6 @@ class GameControlData(Struct):
             self.SET_PLAY_PENALTY_KICK: "penalty kick"
         }, self.setPlay)
 
-
 class TeamInfo(Struct):
     """ Representation of the TeamInfo. """
 
@@ -365,7 +364,6 @@ class TeamInfo(Struct):
 
         return out
 
-
 class PlayerInfo(Struct):
     """ Representation of the PlayerInfo. """
 
@@ -440,4 +438,96 @@ class PlayerInfo(Struct):
     def __str__(self):
         out = "penalty: " + str(self.penalty)
         out += ", secsTillUnpenalised: " + str(self.secsTillUnpenalised)
+        return out
+
+class GameControlReturnData(Struct):
+    """ Representation of the RoboCupGameControlReturnData. """
+
+    GAMECONTROLLER_RETURN_STRUCT_HEADER = b"RGrt"
+    GAMECONTROLLER_RETURN_STRUCT_VERSION = 4
+
+    def __init__(self, data=None, **kwargs):
+       
+        super().__init__('4s' # header 
+                         'B'  # version 
+                         'B'  # playerNum 
+                         'B'  # teamNum
+                         'B'  # fallen 
+                         'f'  # pose x 
+                         'f'  # pose y 
+                         'f'  # pose theta 
+                         'f'  # ballAge 
+                         'f'  # ball x 
+                         'f') # ball y 
+
+        self.header = kwargs.pop('header', self.GAMECONTROLLER_RETURN_STRUCT_HEADER)
+        self.version = kwargs.pop('version', self.GAMECONTROLLER_RETURN_STRUCT_VERSION)
+        self.playerNum = kwargs.pop('playerNum', 0)
+        self.teamNum = kwargs.pop('teamNum', 0)
+        self.fallen = kwargs.pop('fallen', 255)
+
+        # Pose array: x, y, theta
+        self.pose =[
+            kwargs.pop('pose_x', 0.0),
+            kwargs.pop('pose_y', 0.0),
+            kwargs.pop('pose_theta', 0.0)
+        ]
+
+        self.ballAge = kwargs.pop('ballAge', -1.0)
+
+        # Ball array: x, y
+        self.ball =[
+            kwargs.pop('ball_x', 0.0),
+            kwargs.pop('ball_y', 0.0)
+        ]
+
+        if data is not None:
+            self.unpack(data)
+
+    def unpack(self, data):
+        # check 'data' length
+        if len(data) < self.size:
+            print(len(data), self.size)
+            return False, "Not well formed RoboCupGameControlReturnData!"
+
+        msg = Struct.unpack(self, data[:super().size])
+
+        it = iter(msg)
+        self.header = next(it)
+        self.version = next(it)
+        self.playerNum = next(it)
+        self.teamNum = next(it)
+        self.fallen = next(it)
+        
+        self.pose =[next(it), next(it), next(it)]
+        self.ballAge = next(it)
+        self.ball =[next(it), next(it)]
+
+        return True, None
+
+    def pack(self):
+        return Struct.pack(self,
+                           self.header,
+                           self.version,
+                           self.playerNum,
+                           self.teamNum,
+                           self.fallen,
+                           self.pose[0], self.pose[1], self.pose[2],
+                           self.ballAge,
+                           self.ball[0], self.ball[1])
+
+    def __str__(self):
+        out = "======================================\n"
+        try:
+            out += "      header: " + self.header.decode('utf-8') + "\n"
+        except (AttributeError, UnicodeDecodeError):
+            out += "      header: " + str(self.header) + "\n"
+            
+        out += "     version: " + str(self.version) + "\n"
+        out += "   playerNum: " + str(self.playerNum) + "\n"
+        out += "     teamNum: " + str(self.teamNum) + "\n"
+        out += "      fallen: " + str(self.fallen) + "\n"
+        out += f"        pose: x={self.pose[0]:.2f}, y={self.pose[1]:.2f}, th={self.pose[2]:.2f}\n"
+        out += "     ballAge: " + str(self.ballAge) + "\n"
+        out += f"        ball: x={self.ball[0]:.2f}, y={self.ball[1]:.2f}\n"
         return out
