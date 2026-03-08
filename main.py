@@ -58,12 +58,18 @@ class SituationMarker():
             true_msg = self.true_game_data.get_latest()
             if true_msg:
                 print(true_msg)
+                with open('TrueGameData.csv','a') as f:
+                    f.write(true_msg+',\n')
             msg = self.game_data.get_latest()
             if msg: 
                 print(msg)
+                with open('GameData.csv','a') as f:
+                    f.write(msg+',\n')
             robot_msg = self.robot_status.get_latest()
             if robot_msg:
-                print(robot_msg)
+                with open('RobotStatus.csv','a') as f:
+                    f.writelines(robot_msg)
+                    f.write('\n')
             else:
                 print("No data received yet...")
                 

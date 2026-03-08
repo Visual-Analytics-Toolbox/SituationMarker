@@ -65,7 +65,7 @@ class RobotStatusListener():
         
         self.request_port = 3636
         self.target_ip = "127.0.0.1"
-        self.latest_message = None
+        self.latest_messages = {}
         self.lock = threading.Lock()
         self.running = True
         self.register_as_monitor()
@@ -82,27 +82,30 @@ class RobotStatusListener():
     def listen_forever(self):
         self.__socket.setblocking(False)
         while self.running:
-            last_packet = None
+            last_packets = []
             # Drain everything currently in the OS buffer
             while True:
                 try:
                     data, address = self.__socket.recvfrom(8192)
                     header_index = data.find(b'RGrt')
                     if header_index != -1:
-                        
-                        address_bytes = data[:header_index]
-                        last_packet = data[header_index:]
-                        # do we need the ip_address of the robot ? 
-                        ip_address = socket.inet_ntoa(address_bytes)
+                          last_packets.append(data[header_index:])
                     
                 except BlockingIOError:
                     break
             
             # parse and return the newest packet
-            if last_packet:
-                new_msg = GameControlReturnData(last_packet)
-                with self.lock: # Protect the write
-                    self.latest_message = new_msg
+            if last_packets:
+                new_msgs_this_cycle = {}
+                
+                for packet in last_packets:
+                    msg = GameControlReturnData(packet)
+                    key = (msg.teamNum, msg.playerNum)
+                    new_msgs_this_cycle[key] = msg
+                
+                with self.lock:
+                    for key, msg in new_msgs_this_cycle.items():
+                        self.latest_messages[key] = msg
             
             # Give the CPU a tiny break (e.g., 10ms)
             time.sleep(0.01)
@@ -110,7 +113,7 @@ class RobotStatusListener():
     def get_latest(self):
         """The button-press calls this to grab whatever is current."""
         with self.lock:
-            return self.latest_message
+            return list(self.latest_messages.values())
 
 class GameData():
     def __init__(self):
