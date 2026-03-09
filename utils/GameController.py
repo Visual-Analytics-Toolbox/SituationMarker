@@ -5,19 +5,18 @@ from .GameControlData import GameControlData,GameControlReturnData
 import threading
 
 class TrueGameData():
-    def __init__(self):
+    def __init__(self,ip=''):
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.__socket.bind(('', 3838))
+        self.__socket.bind((ip, 3838))
         self.__socket.settimeout(0.5)
         
         self.request_port = 3636
-        self.target_ip = "127.0.0.1"
-
+        self.target_ip = ""
+        self.monitor = False
         self.latest_message = None
         self.lock = threading.Lock()
         self.running = True
-        self.register_as_monitor()
     
     def register_as_monitor(self):
         """Sends the 5-byte 'RGTr' + \x00 packet to the controller."""
@@ -27,6 +26,7 @@ class TrueGameData():
         
         print(f"Sending monitor request to {self.target_ip}:{self.request_port}...")
         self.__socket.sendto(packet, (self.target_ip, self.request_port))
+        self.monitor = True
 
     def listen_forever(self):
         self.__socket.setblocking(False)
@@ -57,19 +57,19 @@ class TrueGameData():
             return self.latest_message
 
 class RobotStatusListener():
-    def __init__(self):
+    def __init__(self,ip=''):
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.__socket.bind(('', 3940))
+        self.__socket.bind((ip, 3940))
         self.__socket.settimeout(0.5)
         
         self.request_port = 3636
-        self.target_ip = "127.0.0.1"
+        self.target_ip = ""
+        self.monitor = False
         self.latest_messages = {}
         self.lock = threading.Lock()
         self.running = True
-        self.register_as_monitor()
-
+       
     def register_as_monitor(self):
         """Sends the 5-byte 'RGTr' + \x00 packet to the controller."""
         header = b'RGTr'
@@ -78,6 +78,7 @@ class RobotStatusListener():
         
         print(f"Sending monitor request to {self.target_ip}:{self.request_port}...")
         self.__socket.sendto(packet, (self.target_ip, self.request_port))
+        self.monitor = True
 
     def listen_forever(self):
         self.__socket.setblocking(False)
@@ -121,7 +122,7 @@ class GameData():
         self.__socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.__socket.bind(('', 3838))
         self.__socket.settimeout(0.5)
-        
+        self.game_controller_address=""
        
         self.latest_message = None
         self.lock = threading.Lock()
@@ -137,7 +138,7 @@ class GameData():
                     data, address = self.__socket.recvfrom(8192)
                     if data.startswith(b'RGme'):
                         last_packet = data
-                    
+                        self.game_controller_address=address[0]
                 except BlockingIOError:
                     break
             

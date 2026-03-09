@@ -3,25 +3,33 @@ import struct
 import time
 from utils.GameControlData import GameControlData,GameControlReturnData
 import threading
+import argparse
 
 class Robot():
-    def __init__(self):
+    def __init__(self,player,team,local_ip):
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.__socket.bind(('', 3838))
         self.__socket.settimeout(0.5)
+
+        self.__send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.__send_socket.bind((local_ip, 0)) 
+
+        self.player = player
+        self.team = team
         self.target_ip = ""
         self.request_port = 3939
         self.latest_message = None
         self.lock = threading.Lock()
         self.running = True
-        #self.register_as_monitor()
 
     def send_status(self):
-        packet = GameControlReturnData(playerNum=4,teamNum=4,fallen=0).pack()
+        if not self.target_ip:
+            return
+        packet = GameControlReturnData(playerNum=self.player,teamNum=self.team,fallen=0).pack()
         
         print(f"Sending monitor request to {self.target_ip}:{self.request_port}...")
-        self.__socket.sendto(packet, (self.target_ip[0], self.request_port))
+        self.__send_socket.sendto(packet, (self.target_ip[0], self.request_port))
 
     def listen_forever(self):
         self.__socket.setblocking(False)
@@ -54,14 +62,10 @@ class Robot():
         with self.lock:
             return self.latest_message,self.latest_adress
 
-# listen to broadcast udp on 3838
-
-# send udp unicast on 3939
-
 class RobotEmulator():
 
-    def __init__(self):      
-        self.robot = Robot()
+    def __init__(self,player,team,ip):      
+        self.robot = Robot(player,team,ip)
         self.is_running = True
         self.start_threads()
         try:
@@ -79,4 +83,14 @@ class RobotEmulator():
         udp_thread = threading.Thread(target=self.robot.listen_forever, daemon=True)
         udp_thread.start()
 
-bla = RobotEmulator()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Start the Robot Emulator.")
+    
+    parser.add_argument("-p", "--player", type=int, default=3, help="Player ID (default: 3)")
+    parser.add_argument("-t", "--team", type=int, default=4, help="Team ID (default: 4)")
+    parser.add_argument("-i", "--ip", type=str, default="", help="IP address to bind to (default:'')")
+    
+    args = parser.parse_args()
+
+    # bind RobotEmulator to diffrent address than SituationMarker
+    emulator = RobotEmulator(args.player, args.team, args.ip)

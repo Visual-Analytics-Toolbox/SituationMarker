@@ -515,6 +515,18 @@ class GameControlReturnData(Struct):
                            self.pose[0], self.pose[1], self.pose[2],
                            self.ballAge,
                            self.ball[0], self.ball[1])
+    
+    def json(self):
+        return {
+            "header":self.header.decode('utf-8') ,
+            "version":self.version,
+            "playerNum":self.playerNum,
+            "teamNum": self.teamNum,
+            "fallen": self.fallen,
+            "pose": {"x":self.pose[0],"y":self.pose[1],"th":self.pose[2]},
+            "ballAge": self.ballAge,
+            "ball": {"x":self.ball[0],"y":self.ball[1]}
+        }
 
     def __str__(self):
         out = "======================================\n"
