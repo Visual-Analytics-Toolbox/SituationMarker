@@ -2,6 +2,7 @@
 from utils.GameController import TrueGameData,RobotStatusListener,GameData
 from utils.logging import get_logger
 from vaapi.client import Vaapi
+from datetime import datetime
 import os
 import threading
 import json
@@ -68,7 +69,7 @@ class SituationMarker():
                     break
                 
                 record = {"uuid":cycle_uuid}
-
+                record["timestamp"] = datetime.now().timestamp()
                 true_msg = self.true_game_data.get_latest()
                 if true_msg:
                     record["TrueGameData"]=true_msg.json()
@@ -91,8 +92,23 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start the Situation Marker.")
     
     parser.add_argument("-i", "--ip", type=str, default="", help="IP address to bind to (default: '')")
-    
+    parser.add_argument("-u", "--upload", action="store_true", help="If set, do not create the main SituationMarker instance.")
+
     args = parser.parse_args()
 
-    #bind socket to diffrent IP than the robot emulator runs on
-    main = SituationMarker(ip=args.ip)
+    if args.upload:
+        client = Vaapi(
+            base_url=os.environ.get("VAT_API_URL"),
+            api_key=os.environ.get("VAT_API_TOKEN"),
+        )
+        with open('Situations.jsonl',"r") as f:
+            data = f.readlines()
+            for situation in data:
+                j_situation = json.loads(situation)
+                s_uuid= j_situation.pop("uuid")
+                client.raw_gc_situation.create(uuid=s_uuid,json_data=j_situation)
+                print(situation)
+
+    else:
+        # bind socket to different IP than the robot emulator runs on
+        main = SituationMarker(ip=args.ip)

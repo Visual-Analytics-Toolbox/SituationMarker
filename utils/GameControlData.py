@@ -14,7 +14,7 @@ class GameControlData(Struct):
     GAMECONTROLLER_TRUE_DATA_VERSION = 0
 
     GAMECONTROLLER_STRUCT_HEADER = b'RGme'
-    GAMECONTROLLER_STRUCT_VERSION = 19
+    GAMECONTROLLER_STRUCT_VERSION = 20
 
     COMPETITION_TYPE_SMALL              = 0
     COMPETITION_TYPE_MIDDLE             = 1
@@ -379,12 +379,10 @@ class PlayerInfo(Struct):
     def __init__(self, data: bytes = None, **kwargs):
         super().__init__('B'   # penalty
                          'B'   # secsTillUnpenalised
-                         'B'   # warnings
                          'B')  # cautions  
 
         self.penalty = kwargs.pop('penalty', 0)
         self.secsTillUnpenalised = kwargs.pop('secsTillUnpenalised', 0)
-        self.warnings = kwargs.pop('warnings', 0)
         self.cautions = kwargs.pop('cautions', 0)
 
         if data is not None:
@@ -401,13 +399,12 @@ class PlayerInfo(Struct):
         it = iter(msg)
         self.penalty = next(it)
         self.secsTillUnpenalised = next(it)
-        self.warnings = next(it)
         self.cautions = next(it)
 
         return True, None
 
     def pack(self):
-        return Struct.pack(self, self.penalty, self.secsTillUnpenalised, self.warnings, self.cautions)
+        return Struct.pack(self, self.penalty, self.secsTillUnpenalised, self.cautions)
 
     def getName(self, names, value):
         if value in names:

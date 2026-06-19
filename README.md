@@ -9,6 +9,12 @@ Setup the game controller from https://github.com/RoboCup-SPL/GameController3/tr
 
 TODO: introduce single and double mode here
 
+set following enviroment variables
+```bash
+export VAT_API_URL='http://127.0.0.1:8000/'
+export VAT_API_TOKEN='<your-token-here>'
+```
+
 
 ## Usage
 start with
@@ -16,6 +22,11 @@ start with
 uv run main.py -i <your-local-ip>
 ```
 This script listens to gamecontroller messages and writes the true game data, the data the robot recieved and all robot status messages to a .jsonl file
+
+upload all stored situations with
+```bash
+uv run main.py --upload
+```
 
 to test logging of robot messages run
 ```bash
@@ -28,6 +39,8 @@ when running this in WSL I ran GameController on eth0 and created a temporary se
 ```bash
 sudo ip addr add 192.168.1.50/24 dev eth0
 ```
+
+
 
 ## Old
 start with
